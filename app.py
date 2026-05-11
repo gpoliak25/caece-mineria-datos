@@ -158,7 +158,7 @@ with tab1:
         st.subheader("Dataset: Bank Marketing (UCI)")
         st.markdown("""
         El dataset proviene de campañas de marketing directo (llamadas telefónicas)
-        de una institución bancaria portuguesa. El objetivo es predecir si el cliente
+        realizadas por una institución bancaria. El objetivo es predecir si el cliente
         suscribirá un depósito a plazo fijo.
 
         ☁️ [Carpeta Google Drive — TP Final Integrador](https://drive.google.com/drive/folders/1thsu2nqNoYj1s41ElEmf8klnW5TpcyBX?usp=sharing)
