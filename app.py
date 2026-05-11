@@ -190,11 +190,10 @@ with tab1:
 
         st.subheader("Distribución variable objetivo")
         fig, ax = plt.subplots(figsize=(4, 3))
-        colors = ["#ef4444", "#22c55e"]
-        conv.plot(kind="bar", ax=ax, color=colors, edgecolor="white")
-        ax.set_title("Suscripción depósito (y)")
-        ax.set_xlabel("")
-        ax.set_xticklabels(["No", "Sí"], rotation=0)
+        conv.plot(kind="bar", ax=ax, edgecolor="white")
+        ax.set_title("Distribución de clientes convertidos")
+        ax.set_xlabel("Conversión")
+        ax.set_xticklabels(["no", "yes"], rotation=0)
         ax.set_ylabel("Cantidad")
         plt.tight_layout()
         st.pyplot(fig)
