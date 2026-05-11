@@ -375,9 +375,20 @@ with tab3:
 
     st.subheader("Comparación de configuraciones")
     st.caption("Referencia: modelo controlado (max_depth=5, balanced, sin duration)")
-    base_acc = accuracy_score(*entrenar_modelo(5, 2, 20, "gini", False, "balanced")[2:4])
-    delta_acc = acc_i - base_acc
-    st.metric("Accuracy vs. referencia", f"{acc_i:.4f}", delta=f"{delta_acc:+.4f}")
+    base_res  = entrenar_modelo(5, 2, 20, "gini", False, "balanced")
+    y_te_b, y_pred_b = base_res[2], base_res[3]
+    base_acc  = accuracy_score(y_te_b, y_pred_b)
+    cm_b      = confusion_matrix(y_te_b, y_pred_b)
+    tn_b, fp_b, fn_b, tp_b = cm_b.ravel()
+    base_prec = tp_b / (tp_b + fp_b) if (tp_b + fp_b) > 0 else 0
+    base_rec  = tp_b / (tp_b + fn_b) if (tp_b + fn_b) > 0 else 0
+    base_f1   = 2 * base_prec * base_rec / (base_prec + base_rec) if (base_prec + base_rec) > 0 else 0
+
+    cmp1, cmp2, cmp3, cmp4 = st.columns(4)
+    cmp1.metric("Accuracy",  f"{acc_i:.4f}",       delta=f"{acc_i - base_acc:+.4f}")
+    cmp2.metric("Precision", f"{precision_i:.4f}", delta=f"{precision_i - base_prec:+.4f}")
+    cmp3.metric("Recall",    f"{recall_i:.4f}",    delta=f"{recall_i - base_rec:+.4f}")
+    cmp4.metric("F-Measure", f"{f1_i:.4f}",        delta=f"{f1_i - base_f1:+.4f}")
 
 # ════════════════════════════════════════════════════════════════════════════
 # TAB 4 — EXPLORAR DATOS
