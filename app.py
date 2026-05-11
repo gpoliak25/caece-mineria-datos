@@ -411,6 +411,7 @@ with tab4:
 # TAB 5 — NOTEBOOK COLAB
 # ════════════════════════════════════════════════════════════════════════════
 with tab5:
+    import sys
     import pathlib
     import subprocess
     import streamlit.components.v1 as components
@@ -419,7 +420,7 @@ with tab5:
     NB_DIR    = pathlib.Path(__file__).parent
     NB_PATH   = NB_DIR / "clientes.ipynb"
     HTML_PATH = NB_DIR / "clientes.html"
-    PYTHON    = "C:/Users/gpoli/AppData/Local/spyder-6/envs/spyder-runtime/python.exe"
+    PYTHON    = sys.executable
 
     st.header("📓 Notebook — clientes.ipynb")
     h1, h2 = st.columns([3, 1])
