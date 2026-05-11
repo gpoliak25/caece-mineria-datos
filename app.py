@@ -20,6 +20,30 @@ st.set_page_config(
 st.title("🏦 Minería de Datos — Captación de Clientes Bancarios")
 st.caption("TP Integrador · López & Poliak · CAECE 2026")
 
+st.markdown("""
+<style>
+/* ── columnas apiladas en mobile ── */
+@media (max-width: 640px) {
+    [data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+    }
+    /* tabs: texto más chico */
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.72rem;
+        padding: 6px 8px;
+    }
+    /* métricas más compactas */
+    [data-testid="stMetricValue"] { font-size: 1.1rem; }
+    [data-testid="stMetricLabel"] { font-size: 0.75rem; }
+    /* botones full-width */
+    .stButton > button,
+    .stLinkButton > a { width: 100%; }
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── IDs de Google Drive ───────────────────────────────────────────────────────
 DRIVE_FILES = {
     "banca_train.csv": "1LBBXWqeepoIDrP-lbCLoKIJGiN7XuQgK",
@@ -111,17 +135,18 @@ with tab1:
         """)
 
         st.subheader("Archivos de datos")
-        r1c1, r1c2, r1c3 = st.columns([3, 1, 1])
-        r1c1.markdown("📄 **banca_train.csv** — conjunto de entrenamiento (45.211 registros)")
-        r1c2.link_button("⬇️ Descargar", "https://drive.google.com/uc?id=1LBBXWqeepoIDrP-lbCLoKIJGiN7XuQgK")
-        if r1c3.button("👁️ Previsualizar", key="prev_train"):
-            preview_train()
-
-        r2c1, r2c2, r2c3 = st.columns([3, 1, 1])
-        r2c1.markdown("📄 **banca_test.csv** — conjunto de prueba (4.521 registros)")
-        r2c2.link_button("⬇️ Descargar", "https://drive.google.com/uc?id=1_5moPuB3MZsHAHe4Iea47kfRTUu_t-6H")
-        if r2c3.button("👁️ Previsualizar", key="prev_test"):
-            preview_test()
+        with st.container(border=True):
+            st.markdown("📄 **banca_train.csv** — entrenamiento (45.211 registros)")
+            b1, b2 = st.columns(2)
+            b1.link_button("⬇️ Descargar", "https://drive.google.com/uc?id=1LBBXWqeepoIDrP-lbCLoKIJGiN7XuQgK", use_container_width=True)
+            if b2.button("👁️ Previsualizar", key="prev_train", use_container_width=True):
+                preview_train()
+        with st.container(border=True):
+            st.markdown("📄 **banca_test.csv** — prueba (4.521 registros)")
+            b3, b4 = st.columns(2)
+            b3.link_button("⬇️ Descargar", "https://drive.google.com/uc?id=1_5moPuB3MZsHAHe4Iea47kfRTUu_t-6H", use_container_width=True)
+            if b4.button("👁️ Previsualizar", key="prev_test", use_container_width=True):
+                preview_test()
 
         st.subheader("Variables del Dataset")
         variables = pd.DataFrame({
@@ -198,9 +223,10 @@ with tab2:
     tn2, fp2, fn2, tp2 = cm2.ravel()
     f1_2 = (2 * tp2 / (2 * tp2 + fp2 + fn2)) if (2 * tp2 + fp2 + fn2) > 0 else 0
 
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2 = st.columns(2)
     c1.metric("Accuracy", f"{acc:.4f}")
     c2.metric("AUC-ROC", f"{auc:.4f}")
+    c3, c4 = st.columns(2)
     c3.metric("F1-Score (Sí)", f"{f1_2:.4f}")
     c4.metric("Profundidad real", str(model.get_depth()))
 
@@ -278,14 +304,15 @@ with tab3:
     f1_i        = 2 * precision_i * recall_i / (precision_i + recall_i) if (precision_i + recall_i) > 0 else 0
     depth_real  = model_i.get_depth()
 
-    # métricas
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
-    m1.metric("Accuracy",         f"{acc_i:.4f}")
-    m2.metric("AUC-ROC",          f"{auc_i:.4f}")
-    m3.metric("Precision",        f"{precision_i:.4f}")
-    m4.metric("Recall",           f"{recall_i:.4f}")
-    m5.metric("F1-Score",         f"{f1_i:.4f}")
-    m6.metric("Profundidad real",  str(depth_real))
+    # métricas — 2 filas de 3
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Accuracy",   f"{acc_i:.4f}")
+    m2.metric("AUC-ROC",    f"{auc_i:.4f}")
+    m3.metric("Precision",  f"{precision_i:.4f}")
+    m4, m5, m6 = st.columns(3)
+    m4.metric("Recall",          f"{recall_i:.4f}")
+    m5.metric("F1-Score",        f"{f1_i:.4f}")
+    m6.metric("Profundidad real", str(depth_real))
 
     col1, col2 = st.columns(2)
 
@@ -365,14 +392,14 @@ with tab4:
 
         st.subheader("Variables numéricas")
         var_num = st.selectbox("Variable numérica", col_num)
-        fig, axes = plt.subplots(1, 2, figsize=(10, 3))
+        fig, axes = plt.subplots(2, 1, figsize=(7, 6))
         train[var_num].hist(bins=30, ax=axes[0], color="#3b82f6", edgecolor="white")
         axes[0].set_title(f"Distribución de {var_num}")
         train.boxplot(column=var_num, by="y", ax=axes[1])
         axes[1].set_title(f"{var_num} por resultado")
         plt.suptitle("")
         plt.tight_layout()
-        st.pyplot(fig)
+        st.pyplot(fig, use_container_width=True)
         plt.close()
 
         st.subheader("Variables categóricas")
@@ -423,9 +450,8 @@ with tab5:
     PYTHON    = sys.executable
 
     st.header("📓 Notebook — clientes.ipynb")
-    h1, h2 = st.columns([3, 1])
-    h1.markdown("Visualización del notebook ejecutado en Google Colab.")
-    h2.link_button("🚀 Abrir en Google Colab", COLAB_URL, use_container_width=True)
+    st.markdown("Visualización del notebook ejecutado en Google Colab.")
+    st.link_button("🚀 Abrir en Google Colab", COLAB_URL, use_container_width=True)
 
     # regenerar HTML si el .ipynb es más nuevo que el .html
     if NB_PATH.exists():
@@ -445,7 +471,7 @@ with tab5:
 
     if HTML_PATH.exists():
         html_content = HTML_PATH.read_text(encoding="utf-8")
-        components.html(html_content, height=1100, scrolling=True)
+        components.html(html_content, height=1400, scrolling=True)
     else:
         st.error("No se pudo generar la vista del notebook.")
         st.link_button("🚀 Abrir en Google Colab", COLAB_URL)
