@@ -18,7 +18,14 @@ st.set_page_config(
 )
 
 st.title("🏦 Minería de Datos — Captación de Clientes Bancarios")
-st.caption("TP Integrador · López & Poliak · CAECE 2026  |  [📂 Ver código en GitHub](https://github.com/gpoliak25/caece-mineria-datos)")
+st.markdown(
+    '<p style="font-size:1.15rem; margin-top:-0.6rem; margin-bottom:0.5rem;">'
+    '<strong>TP Integrador · CAECE 2026</strong>'
+    ' &nbsp;·&nbsp; Lic. Lorena López &amp; Lic. Gisela Poliak'
+    ' &nbsp;|&nbsp; <a href="https://github.com/gpoliak25/caece-mineria-datos" target="_blank">📂 Ver código en GitHub</a>'
+    '</p>',
+    unsafe_allow_html=True
+)
 
 st.markdown('<meta name="google" content="notranslate">', unsafe_allow_html=True)
 
