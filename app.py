@@ -447,18 +447,31 @@ with tab4:
 # TAB 5 — NOTEBOOK COLAB
 # ════════════════════════════════════════════════════════════════════════════
 with tab5:
-    import pathlib
+    import requests
+    import nbformat
     import streamlit.components.v1 as components
+    from nbconvert import HTMLExporter
 
-    COLAB_URL = "https://colab.research.google.com/drive/1iAVeSlS6_UWwYTl9sEHtu9stV-YnTsO9#scrollTo=bAKe4qOQ1ae6"
-    HTML_PATH = pathlib.Path(__file__).parent / "clientes.html"
+    COLAB_URL   = "https://colab.research.google.com/drive/1iAVeSlS6_UWwYTl9sEHtu9stV-YnTsO9#scrollTo=bAKe4qOQ1ae6"
+    NOTEBOOK_ID = "1iAVeSlS6_UWwYTl9sEHtu9stV-YnTsO9"
+
+    @st.cache_data(ttl=3600, show_spinner="Descargando notebook desde Google Drive...")
+    def obtener_html_notebook():
+        url  = f"https://drive.google.com/uc?id={NOTEBOOK_ID}"
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        nb   = nbformat.reads(resp.text, as_version=4)
+        exp  = HTMLExporter(template_name="lab")
+        html, _ = exp.from_notebook_node(nb)
+        return html
 
     st.header("📓 Notebook — clientes.ipynb")
-    st.markdown("Visualización del notebook ejecutado en Google Colab.")
+    st.markdown("Contenido descargado dinámicamente desde Google Drive · se refresca cada hora.")
     st.link_button("🚀 Abrir en Google Colab", COLAB_URL, use_container_width=True)
 
-    if HTML_PATH.exists():
-        components.html(HTML_PATH.read_text(encoding="utf-8"), height=1400, scrolling=True)
-    else:
-        st.warning("Vista del notebook no disponible.")
+    try:
+        html_nb = obtener_html_notebook()
+        components.html(html_nb, height=1400, scrolling=True)
+    except Exception as e:
+        st.error(f"No se pudo cargar el notebook: {e}")
         st.link_button("🚀 Abrir en Google Colab", COLAB_URL)
