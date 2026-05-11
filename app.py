@@ -24,6 +24,27 @@ st.markdown('<meta name="google" content="notranslate">', unsafe_allow_html=True
 
 st.markdown("""
 <style>
+/* ── degradé pastel de fondo ── */
+.stApp {
+    background: linear-gradient(135deg,
+        #fce4ec 0%,
+        #e8eaf6 30%,
+        #e0f7fa 65%,
+        #f1f8e9 100%);
+    background-attachment: fixed;
+}
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg,
+        #f3e5f5 0%,
+        #e3f2fd 55%,
+        #e8f5e9 100%) !important;
+}
+[data-testid="metric-container"] {
+    background: rgba(255,255,255,0.60);
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+    border: 1px solid rgba(255,255,255,0.85);
+}
 /* ── columnas apiladas en mobile ── */
 @media (max-width: 640px) {
     [data-testid="column"] {
@@ -237,7 +258,7 @@ with tab2:
         st.subheader("Matriz de Confusión")
         fig, ax = plt.subplots(figsize=(5, 4))
         disp = ConfusionMatrixDisplay(confusion_matrix=cm2, display_labels=["No", "Sí"])
-        disp.plot(ax=ax, colorbar=False, cmap="Blues")
+        disp.plot(ax=ax, colorbar=False, cmap="PuBu")
         ax.set_title("Matriz de Confusión (modelo controlado)")
         plt.tight_layout()
         st.pyplot(fig)
@@ -247,7 +268,7 @@ with tab2:
         st.subheader("Curva ROC")
         fpr, tpr, _ = roc_curve(y_test_enc, y_prob)
         fig, ax = plt.subplots(figsize=(5, 4))
-        ax.plot(fpr, tpr, color="#3b82f6", lw=2, label=f"AUC = {auc:.3f}")
+        ax.plot(fpr, tpr, color="#90caf9", lw=2, label=f"AUC = {auc:.3f}")
         ax.plot([0, 1], [0, 1], "k--", lw=1)
         ax.set_xlabel("False Positive Rate")
         ax.set_ylabel("True Positive Rate")
@@ -265,7 +286,7 @@ with tab2:
     feat_imp = pd.Series(model.feature_importances_, index=X_train_enc.columns)
     feat_imp = feat_imp.sort_values(ascending=True).tail(15)
     fig, ax = plt.subplots(figsize=(7, 5))
-    feat_imp.plot(kind="barh", ax=ax, color="#3b82f6")
+    feat_imp.plot(kind="barh", ax=ax, color="#90caf9")
     ax.set_title("Importancia de variables")
     ax.set_xlabel("Importancia")
     plt.tight_layout()
@@ -330,7 +351,7 @@ with tab3:
         st.subheader("Matriz de Confusión")
         fig, ax = plt.subplots(figsize=(5, 4))
         disp = ConfusionMatrixDisplay(confusion_matrix=cm_i, display_labels=["No", "Sí"])
-        disp.plot(ax=ax, colorbar=False, cmap="Blues")
+        disp.plot(ax=ax, colorbar=False, cmap="PuBu")
         plt.tight_layout()
         st.pyplot(fig)
         plt.close()
@@ -339,7 +360,7 @@ with tab3:
         st.subheader("Curva ROC")
         fpr_i, tpr_i, _ = roc_curve(y_te_i, y_prob_i)
         fig, ax = plt.subplots(figsize=(5, 4))
-        ax.plot(fpr_i, tpr_i, color="#8b5cf6", lw=2, label=f"AUC = {auc_i:.3f}")
+        ax.plot(fpr_i, tpr_i, color="#ce93d8", lw=2, label=f"AUC = {auc_i:.3f}")
         ax.plot([0, 1], [0, 1], "k--", lw=1)
         ax.set_xlabel("False Positive Rate")
         ax.set_ylabel("True Positive Rate")
@@ -356,7 +377,7 @@ with tab3:
         feat_imp_i = pd.Series(model_i.feature_importances_, index=X_tr_i.columns)
         feat_imp_i = feat_imp_i.sort_values(ascending=True).tail(15)
         fig, ax = plt.subplots(figsize=(6, 5))
-        feat_imp_i.plot(kind="barh", ax=ax, color="#8b5cf6")
+        feat_imp_i.plot(kind="barh", ax=ax, color="#ce93d8")
         ax.set_xlabel("Importancia")
         plt.tight_layout()
         st.pyplot(fig)
@@ -365,8 +386,8 @@ with tab3:
     with col4:
         st.subheader("Distribución de Predicciones")
         fig, ax = plt.subplots(figsize=(6, 5))
-        ax.hist(y_prob_i[y_te_i == 0], bins=40, alpha=0.6, label="Real: No", color="#ef4444")
-        ax.hist(y_prob_i[y_te_i == 1], bins=40, alpha=0.6, label="Real: Sí", color="#22c55e")
+        ax.hist(y_prob_i[y_te_i == 0], bins=40, alpha=0.6, label="Real: No", color="#f48fb1")
+        ax.hist(y_prob_i[y_te_i == 1], bins=40, alpha=0.6, label="Real: Sí", color="#a5d6a7")
         ax.set_xlabel("Probabilidad predicha de suscripción")
         ax.set_ylabel("Frecuencia")
         ax.set_title("Separación de clases")
@@ -414,7 +435,7 @@ with tab4:
         st.subheader("Variables numéricas")
         var_num = st.selectbox("Variable numérica", col_num)
         fig, axes = plt.subplots(2, 1, figsize=(7, 6))
-        train[var_num].hist(bins=30, ax=axes[0], color="#3b82f6", edgecolor="white")
+        train[var_num].hist(bins=30, ax=axes[0], color="#90caf9", edgecolor="white")
         axes[0].set_title(f"Distribución de {var_num}")
         train.boxplot(column=var_num, by="y", ax=axes[1])
         axes[1].set_title(f"{var_num} por resultado")
@@ -427,7 +448,7 @@ with tab4:
         var_cat = st.selectbox("Variable categórica", col_cat)
         ct = pd.crosstab(train[var_cat], train["y"], normalize="index") * 100
         fig, ax = plt.subplots(figsize=(10, 3))
-        ct.plot(kind="bar", ax=ax, color=["#ef4444","#22c55e"], edgecolor="white")
+        ct.plot(kind="bar", ax=ax, color=["#f48fb1","#a5d6a7"], edgecolor="white")
         ax.set_ylabel("% dentro de cada categoría")
         ax.set_title(f"Tasa de suscripción por {var_cat}")
         ax.set_xticklabels(ax.get_xticklabels(), rotation=30, ha="right")
@@ -441,7 +462,7 @@ with tab4:
         num_cols = [c for c in train.columns if pd.api.types.is_numeric_dtype(train[c])]
         corr = train[num_cols].corr()
         fig, ax = plt.subplots(figsize=(8, 6))
-        im = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1)
+        im = ax.imshow(corr, cmap="PiYG", vmin=-1, vmax=1)
         plt.colorbar(im, ax=ax)
         ax.set_xticks(range(len(num_cols)))
         ax.set_yticks(range(len(num_cols)))
