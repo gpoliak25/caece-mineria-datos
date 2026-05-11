@@ -1,6 +1,8 @@
 *.docx
 *.log
-*.txt
 clientes.html
 _tmp_*.ipynb
 __pycache__/
+*_out.txt
+*_err.txt
+output.log
