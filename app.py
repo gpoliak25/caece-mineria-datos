@@ -208,7 +208,7 @@ with tab1:
 with tab2:
     st.header("Resultados del Modelo — Árbol de Decisión")
     st.info(
-        "Modelo controlado: `max_depth=5` · `min_samples_leaf=20` · "
+        "Algoritmo: **CART (Gini)** · `max_depth=5` · `min_samples_leaf=20` · "
         "`class_weight='balanced'` · `duration` excluida (data leakage)."
     )
 
@@ -281,7 +281,16 @@ with tab3:
         st.header("⚙️ Parámetros del Modelo")
         usar_duration = st.toggle("Incluir variable 'duration'", value=False,
                                    help="Duration tiene data leakage — no se conoce antes de llamar al cliente")
-        criterio = st.selectbox("Criterio de división", ["gini", "entropy", "log_loss"])
+        CRITERIOS = {
+            "CART — Gini": "gini",
+            "C4.5 — Entropy": "entropy",
+        }
+        criterio_label = st.selectbox(
+            "Algoritmo / Criterio de división",
+            list(CRITERIOS.keys()),
+            help="CART usa Gini (índice de impureza) · C4.5 usa Entropy (ganancia de información)"
+        )
+        criterio = CRITERIOS[criterio_label]
         max_depth = st.slider("Profundidad máxima del árbol (0 = sin límite)", 0, 20, 5)
         min_split = st.slider("Mínimo de muestras para dividir un nodo", 2, 100, 2)
         min_leaf  = st.slider("Mínimo de muestras en una hoja", 1, 50, 20)
