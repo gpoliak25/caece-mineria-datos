@@ -438,40 +438,18 @@ with tab4:
 # TAB 5 — NOTEBOOK COLAB
 # ════════════════════════════════════════════════════════════════════════════
 with tab5:
-    import sys
     import pathlib
-    import subprocess
     import streamlit.components.v1 as components
 
     COLAB_URL = "https://colab.research.google.com/drive/1iAVeSlS6_UWwYTl9sEHtu9stV-YnTsO9#scrollTo=bAKe4qOQ1ae6"
-    NB_DIR    = pathlib.Path(__file__).parent
-    NB_PATH   = NB_DIR / "clientes.ipynb"
-    HTML_PATH = NB_DIR / "clientes.html"
-    PYTHON    = sys.executable
+    HTML_PATH = pathlib.Path(__file__).parent / "clientes.html"
 
     st.header("📓 Notebook — clientes.ipynb")
     st.markdown("Visualización del notebook ejecutado en Google Colab.")
     st.link_button("🚀 Abrir en Google Colab", COLAB_URL, use_container_width=True)
 
-    # regenerar HTML si el .ipynb es más nuevo que el .html
-    if NB_PATH.exists():
-        needs_regen = (
-            not HTML_PATH.exists()
-            or NB_PATH.stat().st_mtime > HTML_PATH.stat().st_mtime
-        )
-        if needs_regen:
-            with st.spinner("Ejecutando notebook y generando vista..."):
-                subprocess.run(
-                    [PYTHON, "-m", "jupyter", "nbconvert",
-                     "--to", "html", "--execute", "--allow-errors",
-                     "--ExecutePreprocessor.timeout=180",
-                     "clientes.ipynb"],
-                    cwd=NB_DIR, capture_output=True
-                )
-
     if HTML_PATH.exists():
-        html_content = HTML_PATH.read_text(encoding="utf-8")
-        components.html(html_content, height=1400, scrolling=True)
+        components.html(HTML_PATH.read_text(encoding="utf-8"), height=1400, scrolling=True)
     else:
-        st.error("No se pudo generar la vista del notebook.")
+        st.warning("Vista del notebook no disponible.")
         st.link_button("🚀 Abrir en Google Colab", COLAB_URL)

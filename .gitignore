@@ -1,6 +1,5 @@
 *.docx
 *.log
-clientes.html
 _tmp_*.ipynb
 __pycache__/
 *_out.txt
