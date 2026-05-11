@@ -23,55 +23,49 @@ import matplotlib.pyplot as plt
 # Librerías para machine learning
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import (confusion_matrix, accuracy_score,
+                             classification_report, ConfusionMatrixDisplay,
+                             roc_curve, roc_auc_score)
 
 """Paso 3: Subir los archivos CSV a Google Colab"""
 
 #from google.colab import files
-
 #uploaded = files.upload()
 
 """Paso 4: Leer los dataset"""
 
 # Cargar datasets
 train = pd.read_csv('banca_train.csv', sep=';')
-test = pd.read_csv('banca_test.csv', sep=';')
+test  = pd.read_csv('banca_test.csv',  sep=';')
 
 """Paso 5: Verificar que los datos se cargaron correctamente"""
 
-# Mostrar primeras filas
-train.head()
-
-test.head()
+print(train.head())
+print(test.head())
 
 """Paso 6: Analizar la Estructura del Dataset"""
 
 train.info()
-
-train.describe()
+print(train.describe())
 
 """Paso 7: Verificar valores nulos"""
 
-train.isnull().sum()
-
-test.isnull().sum()
+print(train.isnull().sum())
+print(test.isnull().sum())
 
 """Paso 8: Analizar la variable objetivo"""
 
-train['y'].value_counts()
-
-train['y'].value_counts(normalize=True) * 100
+print(train['y'].value_counts())
+print(train['y'].value_counts(normalize=True) * 100)
 
 """Paso 9: Visualizar la variable objetivo"""
 
-train.columns
-
-train['y'].value_counts().plot(kind='bar')
-
-plt.title('Distribución de clientes convertidos')
-plt.xlabel('Conversión')
+train['y'].value_counts().plot(kind='bar', color=['#ef4444', '#22c55e'], edgecolor='white')
+plt.title('Distribución de la variable objetivo (y)')
+plt.xlabel('Suscripción depósito')
 plt.ylabel('Cantidad')
+plt.xticks(rotation=0)
+plt.tight_layout()
 plt.show()
 
 """Paso 10: Separar variables predictoras y variable objetivo"""
@@ -82,156 +76,126 @@ y_train = train['y']
 X_test = test.drop('y', axis=1)
 y_test = test['y']
 
-"""Paso 11: Transformar variables categóricas"""
+"""Paso 11: Eliminar variable duration (data leakage)
 
-## Crear encoder
-le = LabelEncoder()
-
-# Transformar columnas categóricas
-for col in X_train.columns:
-    if X_train[col].dtype == 'object':
-
-        # Ajustar encoder en train
-        X_train[col] = le.fit_transform(X_train[col])
-
-        # Aplicar transformación en test
-        X_test[col] = le.transform(X_test[col])
-
-# Transformar variable objetivo
-y_train = le.fit_transform(y_train)
-y_test = le.transform(y_test)
-
-X_train.head()##
-
-# Transformar variables categóricas con One Hot Encoding
-X_total = pd.concat([X_train, X_test], axis=0)
-
-X_total = pd.get_dummies(X_total, drop_first=True)
-
-X_train = X_total.iloc[:len(X_train), :]
-X_test = X_total.iloc[len(X_train):, :]
-
-# Transformar variable objetivo
-y_train = pd.Series(y_train).replace({'no': 0, 'yes': 1})
-y_test = pd.Series(y_test).replace({'no': 0, 'yes': 1})
-
-"""Paso 12: Entrenar el modelo de Machine Learning.
-🌳 Árbol de Decisión (Decision Tree)
+duration sólo se conoce DESPUÉS de realizada la llamada telefónica,
+por lo que no puede usarse como predictor en un escenario real.
 """
 
-# Crear modelo
-modelo = DecisionTreeClassifier(random_state=42)
+X_train = X_train.drop('duration', axis=1)
+X_test  = X_test.drop('duration',  axis=1)
 
-# Entrenar modelo
-modelo.fit(X_train, y_train)
+"""Paso 12: Transformar variables categóricas con One-Hot Encoding
 
-"""Paso 13: Realizar predicciones"""
+Se usa pd.get_dummies (One-Hot Encoding) en lugar de LabelEncoder para variables
+nominales como 'job', 'marital', 'education', etc. LabelEncoder asigna orden
+implícito (0 < 1 < 2) que no existe en estas categorías, introduciendo ruido.
+Se concatena train+test antes de aplicar get_dummies para garantizar que ambos
+conjuntos tengan exactamente las mismas columnas.
+"""
 
-# Generar predicciones
-y_pred = modelo.predict(X_test)
+X_total     = pd.concat([X_train, X_test], axis=0)
+X_total     = pd.get_dummies(X_total, drop_first=True)
+X_train_enc = X_total.iloc[:len(X_train), :]
+X_test_enc  = X_total.iloc[len(X_train):,  :]
 
-"""Paso 14: Crear la matriz de confusión"""
+# Codificar variable objetivo: no → 0, yes → 1
+le          = LabelEncoder()
+y_train_enc = le.fit_transform(y_train)
+y_test_enc  = le.transform(y_test)
 
-# Matriz de confusión
-cm = confusion_matrix(y_test, y_pred)
+print(f"Features después de One-Hot Encoding: {X_train_enc.shape[1]}")
+print(X_train_enc.head())
 
-cm
+"""Paso 13: Modelo base — árbol sin restricciones
 
-"""Paso 15: Visualizar la matriz de confusión"""
+Se entrena primero un árbol sin límite de profundidad para ilustrar el problema
+de overfitting. Con max_depth=None el árbol crece hasta memorizar todos los
+datos de entrenamiento.
+"""
 
-# Mostrar matriz de confusión
-disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+modelo_base = DecisionTreeClassifier(random_state=42)
+modelo_base.fit(X_train_enc, y_train_enc)
+y_pred_base = modelo_base.predict(X_test_enc)
 
-disp.plot()
+print("\n=== MODELO BASE (sin restricciones) ===")
+print(f"Profundidad del árbol: {modelo_base.get_depth()}")
+print(f"Accuracy en test:      {accuracy_score(y_test_enc, y_pred_base):.4f}")
+print("ADVERTENCIA: Accuracy cercano a 1.0 indica overfitting.")
+print("El árbol memorizó los datos de entrenamiento y no generaliza bien.\n")
 
-plt.title('Matriz de Confusión')
+"""Paso 14: Entrenar el modelo controlado
+
+Se incorporan tres correcciones clave:
+  - max_depth=5: limita la profundidad para evitar memorización
+  - min_samples_leaf=20: cada hoja debe tener al menos 20 muestras
+  - class_weight='balanced': compensa el desbalance 88% No / 12% Sí,
+    ponderando más los errores en la clase minoritaria
+"""
+
+modelo = DecisionTreeClassifier(
+    max_depth=5,
+    min_samples_leaf=20,
+    class_weight='balanced',
+    random_state=42
+)
+modelo.fit(X_train_enc, y_train_enc)
+
+"""Paso 15: Realizar predicciones"""
+
+y_pred = modelo.predict(X_test_enc)
+y_prob = modelo.predict_proba(X_test_enc)[:, 1]
+
+"""Paso 16: Crear la matriz de confusión"""
+
+cm = confusion_matrix(y_test_enc, y_pred)
+print("Matriz de confusión:\n", cm)
+
+"""Paso 17: Visualizar la matriz de confusión"""
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['No', 'Sí'])
+disp.plot(cmap='Blues', colorbar=False)
+plt.title('Matriz de Confusión — Modelo Controlado (sin duration)')
+plt.tight_layout()
 plt.show()
 
-"""Paso 16: Calcular el Accuracy del modelo"""
+"""Paso 18: Calcular el Accuracy del modelo"""
 
-# Accuracy
-accuracy = accuracy_score(y_test, y_pred)
-
+accuracy = accuracy_score(y_test_enc, y_pred)
 print("Accuracy del modelo:", accuracy)
 
-"""Paso 17: Obtener métricas completas"""
+"""Paso 19: Obtener métricas completas
 
-# Reporte de clasificación
-print(classification_report(y_test, y_pred))
+Con datos desbalanceados (88% / 12%), el F1-score y el AUC-ROC son métricas
+más representativas que el accuracy sólo.
+"""
 
-"""Paso 18: Eliminar la variable duration"""
+print(classification_report(y_test_enc, y_pred, target_names=['No', 'Sí']))
 
-# Eliminar variable duration
-X_train2 = X_train.drop('duration', axis=1)
-X_test2 = X_test.drop('duration', axis=1)
+"""Paso 20: Calcular curva ROC y AUC"""
 
-"""Paso 19: Entrenar nuevamente el modelo SIN duration"""
-
-# Crear nuevo modelo
-modelo2 = DecisionTreeClassifier(random_state=42)
-
-# Entrenar modelo sin duration
-modelo2.fit(X_train2, y_train)
-
-"""Paso 20: Generar nuevas predicciones"""
-
-# Predicciones del nuevo modelo
-y_pred2 = modelo2.predict(X_test2)
-
-"""Paso 21: Calcular nueva matriz de confusión y accuracy"""
-
-# Nueva matriz de confusión
-cm2 = confusion_matrix(y_test, y_pred2)
-
-# Accuracy nuevo
-accuracy2 = accuracy_score(y_test, y_pred2)
-
-print("Nuevo Accuracy:", accuracy2)
-print(cm2)
-
-"""Paso 22: Ver nueva matriz gráficamente"""
-
-disp = ConfusionMatrixDisplay(confusion_matrix=cm2)
-
-disp.plot()
-
-plt.title('Matriz de Confusión SIN duration')
-plt.show()
-
-"""Paso 23: Obtener nuevas métricas"""
-
-print(classification_report(y_test, y_pred2))
-
-"""Paso 24: Importar métricas ROC"""
-
-# Probabilidades de pertenecer a la clase positiva
-y_prob = modelo2.predict_proba(X_test2)[:,1]
-
-"""Paso 26: Calcular curva ROC y AUC"""
-
-from sklearn.metrics import roc_curve, roc_auc_score
-
-# Calcular curva ROC
-fpr, tpr, thresholds = roc_curve(y_test, y_prob)
-
-# Calcular AUC
-auc = roc_auc_score(y_test, y_prob)
-
+fpr, tpr, thresholds = roc_curve(y_test_enc, y_prob)
+auc = roc_auc_score(y_test_enc, y_prob)
 print("AUC:", auc)
 
-"""Paso 27: Graficar la Curva ROC"""
+"""Paso 21: Graficar la Curva ROC"""
 
-plt.figure(figsize=(8,6))
-
-plt.plot(fpr, tpr, label='ROC Curve (AUC = %0.2f)' % auc)
-
-plt.plot([0,1], [0,1], linestyle='--')
-
+plt.figure(figsize=(8, 6))
+plt.plot(fpr, tpr, color='#3b82f6', lw=2, label=f'ROC Curve (AUC = {auc:.2f})')
+plt.plot([0, 1], [0, 1], linestyle='--', color='gray', lw=1)
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
-
-plt.title('Curva ROC')
-
+plt.title('Curva ROC — Modelo Controlado')
 plt.legend()
+plt.tight_layout()
+plt.show()
 
+"""Paso 22: Importancia de variables"""
+
+feat_imp = pd.Series(modelo.feature_importances_, index=X_train_enc.columns)
+feat_imp.sort_values(ascending=True).tail(15).plot(
+    kind='barh', figsize=(8, 5), color='#3b82f6')
+plt.title('Top 15 Variables más importantes')
+plt.xlabel('Importancia (Gini)')
+plt.tight_layout()
 plt.show()
