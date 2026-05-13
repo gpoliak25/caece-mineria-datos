@@ -4,4 +4,11 @@ _tmp_*.ipynb
 __pycache__/
 *_out.txt
 *_err.txt
+out.txt
+err.txt
 output.log
+.venv/
+.venv
+banca_testV1.csv
+banca_trainV1.csv
+banca.csv

@@ -82,12 +82,19 @@ DRIVE_FILES = {
 DRIVE_FOLDER = "https://drive.google.com/drive/folders/1thsu2nqNoYj1s41ElEmf8klnW5TpcyBX?usp=sharing"
 
 # ── carga de datos (cached) ──────────────────────────────────────────────────
-@st.cache_data(show_spinner="Cargando datos desde Google Drive...")
+@st.cache_data(show_spinner="Cargando datos...")
 def cargar_datos():
-    url_train = f"https://drive.google.com/uc?id={DRIVE_FILES['banca_train.csv']}"
-    url_test  = f"https://drive.google.com/uc?id={DRIVE_FILES['banca_test.csv']}"
-    train = pd.read_csv(url_train, sep=";")
-    test  = pd.read_csv(url_test,  sep=";")
+    import os
+    local_train = os.path.join(os.path.dirname(__file__), "banca_train.csv")
+    local_test  = os.path.join(os.path.dirname(__file__), "banca_test.csv")
+    if os.path.exists(local_train) and os.path.exists(local_test):
+        train = pd.read_csv(local_train, sep=";")
+        test  = pd.read_csv(local_test,  sep=";")
+    else:
+        url_train = f"https://drive.google.com/uc?id={DRIVE_FILES['banca_train.csv']}"
+        url_test  = f"https://drive.google.com/uc?id={DRIVE_FILES['banca_test.csv']}"
+        train = pd.read_csv(url_train, sep=";")
+        test  = pd.read_csv(url_test,  sep=";")
     return train, test
 
 @st.cache_data
@@ -139,8 +146,9 @@ def preview_test():
     st.dataframe(test.head(50), use_container_width=True)
 
 # ── tabs ─────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab_eda, tab2, tab3, tab4, tab5 = st.tabs([
     "📂 Fuentes de Datos",
+    "🔬 Análisis del Dataset",
     "📊 Resultados del Modelo",
     "🎛️ Dashboard Interactivo",
     "🔍 Explorar Datos",
@@ -230,6 +238,285 @@ with tab1:
         plt.close()
 
         st.caption("⚠️ Dataset desbalanceado: ~88% no suscribe")
+
+# ════════════════════════════════════════════════════════════════════════════
+# TAB EDA — ANÁLISIS DEL DATASET (PASO 2)
+# ════════════════════════════════════════════════════════════════════════════
+with tab_eda:
+    from scipy import stats as _stats
+
+    st.header("🔬 Análisis del Dataset — Paso 2")
+    st.caption("Basado en banca_test.csv (4.521 registros · 17 variables)")
+    train_eda, test_eda = cargar_datos()
+    df_eda = test_eda.copy()
+
+    sub_dim, sub_cal, sub_tgt, sub_cor, sub_dec = st.tabs([
+        "📐 Dimensiones y Variables",
+        "❓ Calidad de Datos",
+        "🎯 Variable Objetivo",
+        "🔗 Correlaciones",
+        "✅ Decisiones",
+    ])
+
+    # ── SUBTAB 1: Dimensiones y Variables ─────────────────────────────────────
+    with sub_dim:
+        st.subheader("Tamaño del Dataset")
+        n_rows, n_cols = df_eda.shape
+        mem_mb = df_eda.memory_usage(deep=True).sum() / 1024 ** 2
+        dims_df = pd.DataFrame({
+            "Dimensión":   ["Filas", "Columnas", "Memoria aproximada", "Celdas totales"],
+            "Valor":       [f"{n_rows:,}", str(n_cols), f"≈ {mem_mb:.1f} MB", f"≈ {n_rows * n_cols:,}"],
+            "Implicancia": [
+                "Dataset pequeño-mediano; cabe en memoria sin problemas.",
+                "Cantidad razonable; no requiere reducción de dimensionalidad.",
+                "Permite cross-validation y grid search en segundos.",
+                "Apto para algoritmos clásicos; no justifica deep learning.",
+            ],
+        })
+        st.dataframe(dims_df, use_container_width=True, hide_index=True)
+
+        st.subheader("Tipos de Variables")
+        var_rows = []
+        for col in df_eda.columns:
+            if col == "y":
+                vtype, nuniq, detalle = "🎯 Target", 2, "yes / no"
+            elif pd.api.types.is_numeric_dtype(df_eda[col]):
+                vtype  = "🔢 Numérica"
+                nuniq  = df_eda[col].nunique()
+                detalle = f"{df_eda[col].min():.0f} – {df_eda[col].max():.0f}  ({nuniq} únicos)"
+            else:
+                vtype  = "🔤 Categórica"
+                nuniq  = df_eda[col].nunique()
+                sample = ", ".join(df_eda[col].value_counts().head(3).index.tolist())
+                detalle = f"{sample}{'…' if nuniq > 3 else ''}  ({nuniq} niveles)"
+            nota = "⚠️ DATA LEAKAGE — excluida" if col == "duration" else ""
+            var_rows.append({"Variable": col, "Tipo": vtype, "Rango / Niveles": detalle, "Nota": nota})
+        st.dataframe(pd.DataFrame(var_rows), use_container_width=True, hide_index=True)
+
+        st.subheader("⚠️ Data Leakage — Variable `duration`")
+        st.error(
+            "**`duration`** registra cuántos segundos duró la llamada al cliente. "
+            "Cuando el modelo debe decidir **a quién llamar**, esa duración todavía no existe: "
+            "se conoce recién después de realizar la llamada.\n\n"
+            "- Correlación con target: **r = +0,40** (la más alta del dataset).\n"
+            "- Con `duration` incluida: AUC > 0,90 — métricas infladas, modelo inútil en producción.\n"
+            "- Con `duration` excluida: AUC ≈ 0,72 — performance real y desplegable.\n\n"
+            "**Decisión:** `duration` se excluye de todos los modelos de este TP."
+        )
+
+    # ── SUBTAB 2: Calidad de Datos ─────────────────────────────────────────────
+    with sub_cal:
+        col_q1, col_q2 = st.columns(2)
+
+        with col_q1:
+            st.subheader("Faltantes encubiertos — categoría 'unknown'")
+            tratamientos = {
+                "poutcome": "MANTENER — cliente nuevo (informativo)",
+                "contact":  "MANTENER — patrón con campañas antiguas",
+                "education":"Imputar con moda o tratar como categoría",
+                "job":      "Imputar con moda",
+            }
+            unk_rows = []
+            for col in df_eda.select_dtypes(include="object").columns:
+                n = (df_eda[col] == "unknown").sum()
+                if n > 0:
+                    unk_rows.append({
+                        "Variable":    col,
+                        "Cantidad":    n,
+                        "%":           f"{n / len(df_eda) * 100:.1f}%",
+                        "Tratamiento": tratamientos.get(col, "Evaluar"),
+                    })
+            st.dataframe(pd.DataFrame(unk_rows), use_container_width=True, hide_index=True)
+
+            st.subheader("Faltante numérico — `pdays = −1`")
+            n_pdays = (df_eda["pdays"] == -1).sum()
+            st.info(
+                f"**{n_pdays:,} registros ({n_pdays / len(df_eda) * 100:.0f}%)** tienen `pdays = −1` "
+                f"(*cliente nunca contactado anteriormente*). Coincide con `poutcome = unknown`.\n\n"
+                "**No es un faltante a imputar:** es información valiosa. "
+                "Estrategia: crear flag `nunca_contactado = (pdays == −1)`."
+            )
+
+        with col_q2:
+            st.subheader("Outliers — Regla del IQR")
+            out_rows = []
+            for col in df_eda.select_dtypes(include="number").columns:
+                q1  = df_eda[col].quantile(0.25)
+                q3  = df_eda[col].quantile(0.75)
+                iqr = q3 - q1
+                lim_sup = q3 + 1.5 * iqr
+                lim_inf = q1 - 1.5 * iqr
+                n_out = ((df_eda[col] > lim_sup) | (df_eda[col] < lim_inf)).sum()
+                if n_out > 0:
+                    out_rows.append({
+                        "Variable":  col,
+                        "Mediana":   f"{df_eda[col].median():.0f}",
+                        "Lím. sup.": f"{lim_sup:.0f}",
+                        "Outliers":  n_out,
+                        "%":         f"{n_out / len(df_eda) * 100:.1f}%",
+                    })
+            st.dataframe(pd.DataFrame(out_rows), use_container_width=True, hide_index=True)
+            st.caption("Para modelos basados en árboles los outliers no requieren tratamiento.")
+
+            st.subheader("Boxplots")
+            num_viz = [c for c in df_eda.select_dtypes(include="number").columns if c != "duration"]
+            fig_box, axes_box = plt.subplots(1, len(num_viz), figsize=(14, 4))
+            for i, col in enumerate(num_viz):
+                axes_box[i].boxplot(
+                    df_eda[col].dropna(), patch_artist=True,
+                    boxprops=dict(facecolor="#b3e5fc"),
+                    medianprops=dict(color="#0277bd", linewidth=2),
+                )
+                axes_box[i].set_title(col, fontsize=8)
+                axes_box[i].tick_params(axis="y", labelsize=7)
+            plt.suptitle("Variables numéricas (sin duration)", fontsize=9)
+            plt.tight_layout()
+            st.pyplot(fig_box)
+            plt.close()
+
+    # ── SUBTAB 3: Variable Objetivo ────────────────────────────────────────────
+    with sub_tgt:
+        col_t1, col_t2 = st.columns(2)
+        counts_y = df_eda["y"].value_counts()
+        ratio    = counts_y.max() / counts_y.min()
+
+        with col_t1:
+            st.subheader("Distribución del Target (y)")
+            fig_pie, ax_pie = plt.subplots(figsize=(5, 5))
+            ax_pie.pie(
+                counts_y.values,
+                labels=counts_y.index,
+                autopct="%1.1f%%",
+                colors=["#f48fb1", "#a5d6a7"],
+                startangle=90,
+                textprops={"fontsize": 13},
+            )
+            ax_pie.set_title("Distribución de la variable objetivo")
+            plt.tight_layout()
+            st.pyplot(fig_pie)
+            plt.close()
+            st.metric("Ratio de desbalance", f"{ratio:.1f} : 1",
+                      help="Clase mayoritaria (no) vs minoritaria (yes)")
+
+        with col_t2:
+            st.subheader("Recuento por clase")
+            st.dataframe(
+                pd.DataFrame({
+                    "Clase":      counts_y.index,
+                    "Cantidad":   counts_y.values,
+                    "Proporción": [f"{v / counts_y.sum() * 100:.2f}%" for v in counts_y.values],
+                }),
+                use_container_width=True, hide_index=True,
+            )
+            st.warning(
+                "**Desbalance fuerte (ratio ≈ 7,7 : 1)**\n\n"
+                "- La **accuracy** es una métrica **engañosa**: un modelo trivial que prediga "
+                "siempre 'no' alcanza el 88,5% sin aportar ningún valor.\n"
+                "- Se priorizarán: **AUC-ROC · F1 · Recall** sobre la clase positiva · **AUC-PR**.\n"
+                "- La partición train/test debe ser **estratificada**.\n"
+                "- Estrategias: `class_weight='balanced'`, SMOTE, ajuste del umbral de decisión."
+            )
+
+            st.subheader("Tasa de suscripción por mes")
+            conv_month = (
+                df_eda.groupby("month")["y"]
+                .apply(lambda s: (s == "yes").mean() * 100)
+                .sort_values(ascending=False)
+            )
+            fig_m, ax_m = plt.subplots(figsize=(6, 3))
+            conv_month.plot(kind="bar", ax=ax_m, color="#a5d6a7", edgecolor="white")
+            ax_m.set_ylabel("Tasa de conversión (%)")
+            ax_m.set_title("% suscripción por mes")
+            ax_m.set_xticklabels(ax_m.get_xticklabels(), rotation=30, ha="right")
+            plt.tight_layout()
+            st.pyplot(fig_m)
+            plt.close()
+
+    # ── SUBTAB 4: Correlaciones ────────────────────────────────────────────────
+    with sub_cor:
+        st.subheader("Correlación lineal entre variables numéricas (Pearson)")
+        num_all = df_eda.select_dtypes(include="number").columns.tolist()
+        corr_m  = df_eda[num_all].corr()
+        fig_cor, ax_cor = plt.subplots(figsize=(9, 7))
+        im_cor = ax_cor.imshow(corr_m.values, cmap="PiYG", vmin=-1, vmax=1)
+        plt.colorbar(im_cor, ax=ax_cor)
+        ax_cor.set_xticks(range(len(num_all)))
+        ax_cor.set_yticks(range(len(num_all)))
+        ax_cor.set_xticklabels(num_all, rotation=45, ha="right", fontsize=9)
+        ax_cor.set_yticklabels(num_all, fontsize=9)
+        for i in range(len(num_all)):
+            for j in range(len(num_all)):
+                ax_cor.text(j, i, f"{corr_m.iloc[i, j]:.2f}",
+                            ha="center", va="center", fontsize=7)
+        ax_cor.set_title("Correlación de Pearson — Variables numéricas")
+        plt.tight_layout()
+        st.pyplot(fig_cor)
+        plt.close()
+
+        col_c1, col_c2 = st.columns(2)
+
+        with col_c1:
+            st.subheader("Numérica vs. Target (Punto-Biserial)")
+            y_bin = (df_eda["y"] == "yes").astype(int)
+            pb_rows = []
+            for col in [c for c in num_all]:
+                r_pb, p_pb = _stats.pointbiserialr(df_eda[col].fillna(df_eda[col].median()), y_bin)
+                pb_rows.append({"Variable": col, "r": round(r_pb, 3), "p-value": f"{p_pb:.2e}"})
+            df_pb = pd.DataFrame(pb_rows).sort_values("r", key=abs, ascending=False)
+            st.dataframe(df_pb, use_container_width=True, hide_index=True)
+            st.caption("`duration` tiene r = +0,40 — la más predictiva, pero produce data leakage.")
+
+        with col_c2:
+            st.subheader("Categórica vs. Target (V de Cramér)")
+            cat_cols_eda = [c for c in df_eda.select_dtypes(include="object").columns if c != "y"]
+            cr_rows = []
+            for col in cat_cols_eda:
+                ct_eda = pd.crosstab(df_eda[col], df_eda["y"])
+                chi2, p_chi, _, _ = _stats.chi2_contingency(ct_eda)
+                n_chi = ct_eda.sum().sum()
+                v = (chi2 / (n_chi * (min(ct_eda.shape) - 1))) ** 0.5
+                cr_rows.append({"Variable": col, "V de Cramér": round(v, 3), "p-value": f"{p_chi:.2e}"})
+            df_cr = pd.DataFrame(cr_rows).sort_values("V de Cramér", ascending=False)
+            st.dataframe(df_cr, use_container_width=True, hide_index=True)
+            st.caption("`poutcome` es la más informativa: éxito previo → 64% de conversión.")
+
+    # ── SUBTAB 5: Decisiones ───────────────────────────────────────────────────
+    with sub_dec:
+        st.subheader("✅ Decisiones de Preprocesamiento — Paso 2")
+        dec_rows = [
+            {
+                "N°": "1",
+                "Decisión": "Excluir `duration` por data leakage",
+                "Justificación": "Solo se conoce DESPUÉS de hacer la llamada; usarla en producción sería tramposo.",
+            },
+            {
+                "N°": "2",
+                "Decisión": "Codificar categóricas con One-Hot Encoding",
+                "Justificación": "Se usa `handle_unknown='ignore'` para robustez ante categorías nuevas en el test.",
+            },
+            {
+                "N°": "3",
+                "Decisión": "Estandarizar numéricas solo para modelos lineales",
+                "Justificación": "Los árboles no requieren escalado; aplica únicamente a regresión logística.",
+            },
+            {
+                "N°": "4",
+                "Decisión": "Tratar 'unknown' como categoría legítima",
+                "Justificación": "No se imputa: aporta información (especialmente en poutcome).",
+            },
+            {
+                "N°": "5",
+                "Decisión": "Partición estratificada 70/30",
+                "Justificación": "Train: 3.164 registros; Test: 1.357. Tasa de positivos preservada (≈ 11,5%).",
+            },
+            {
+                "N°": "6",
+                "Decisión": "NO eliminar outliers en este TP",
+                "Justificación": "Variables con outliers (balance, campaign) se modelan con árboles/boosting robustos.",
+            },
+        ]
+        st.dataframe(pd.DataFrame(dec_rows), use_container_width=True, hide_index=True)
+        st.info("Estas decisiones están implementadas directamente en `entrenar_modelo()` — el resto de la app las aplica en todas las configuraciones.")
 
 # ════════════════════════════════════════════════════════════════════════════
 # TAB 2 — RESULTADOS DEL MODELO
