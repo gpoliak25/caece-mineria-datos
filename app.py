@@ -218,26 +218,133 @@ with tab1:
         st.dataframe(variables, use_container_width=True, hide_index=True)
 
     with col2:
-        train, _ = cargar_datos()
-        st.subheader("Estadísticas Generales")
-        st.metric("Registros Train", f"{len(train):,}")
-        st.metric("Variables", str(train.shape[1]))
-        conv = train["y"].value_counts()
-        pct  = round(conv["yes"] / len(train) * 100, 1)
-        st.metric("Tasa de conversión", f"{pct}%")
+        train_t1, test_t1 = cargar_datos()
+        conv_tr = train_t1["y"].value_counts()
+        conv_te = test_t1["y"].value_counts()
+        pct_tr  = round(conv_tr.get("yes", 0) / len(train_t1) * 100, 1)
+        pct_te  = round(conv_te.get("yes", 0) / len(test_t1)  * 100, 1)
 
+        st.markdown("""
+        <style>
+        .stat-card {
+            background: rgba(255,255,255,0.55);
+            border-radius: 14px;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .stat-card .label {
+            font-size: 0.72rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 2px;
+        }
+        .stat-row { display: flex; gap: 12px; margin-bottom: 10px; }
+        .stat-half {
+            flex: 1;
+            background: rgba(255,255,255,0.55);
+            border-radius: 14px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .stat-half .badge {
+            display: inline-block;
+            font-size: 0.68rem;
+            font-weight: 700;
+            border-radius: 20px;
+            padding: 2px 10px;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .badge-train { background: #5c9bd6; }
+        .badge-test  { background: #66bb6a; }
+        .stat-half .val { font-size: 1.45rem; font-weight: 700; color: #333; line-height: 1.1; }
+        .stat-half .sub { font-size: 0.70rem; color: #888; margin-top: 2px; }
+        .progress-wrap { margin: 4px 0 8px; }
+        .progress-bar {
+            height: 7px; border-radius: 4px;
+            background: linear-gradient(90deg, #f48fb1, #ce93d8);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.subheader("Estadísticas Generales")
+
+        # Tarjetas de registros
+        st.markdown(f"""
+        <div class="stat-row">
+          <div class="stat-half">
+            <span class="badge badge-train">Train</span>
+            <div class="val">📋 {len(train_t1):,}</div>
+            <div class="sub">registros</div>
+          </div>
+          <div class="stat-half">
+            <span class="badge badge-test">Test</span>
+            <div class="val">📋 {len(test_t1):,}</div>
+            <div class="sub">registros</div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-half">
+            <span class="badge badge-train">Train</span>
+            <div class="val">🎯 {pct_tr}%</div>
+            <div class="sub">tasa de conversión</div>
+            <div class="progress-wrap">
+              <div class="progress-bar" style="width:{pct_tr*3}%"></div>
+            </div>
+          </div>
+          <div class="stat-half">
+            <span class="badge badge-test">Test</span>
+            <div class="val">🎯 {pct_te}%</div>
+            <div class="sub">tasa de conversión</div>
+            <div class="progress-wrap">
+              <div class="progress-bar" style="width:{pct_te*3}%"></div>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Variables en común</div>
+          <div style="font-size:1.6rem;font-weight:700;color:#333">
+            🔢 {train_t1.shape[1]}
+          </div>
+          <div style="font-size:0.72rem;color:#888">16 predictoras + 1 target (y)</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Gráfico combinado: barras horizontales apiladas por dataset
         st.subheader("Distribución variable objetivo")
-        fig, ax = plt.subplots(figsize=(4, 3))
-        conv.plot(kind="bar", ax=ax, edgecolor="white")
-        ax.set_title("Distribución de clientes convertidos")
-        ax.set_xlabel("Conversión")
-        ax.set_xticklabels(["no", "yes"], rotation=0)
-        ax.set_ylabel("Cantidad")
+        no_tr  = conv_tr.get("no",  0)
+        yes_tr = conv_tr.get("yes", 0)
+        no_te  = conv_te.get("no",  0)
+        yes_te = conv_te.get("yes", 0)
+
+        fig_t1, ax_t1 = plt.subplots(figsize=(4.2, 2.4))
+        fig_t1.patch.set_alpha(0)
+        ax_t1.set_facecolor("none")
+        datasets = ["Train", "Test"]
+        totals   = [len(train_t1), len(test_t1)]
+        nos      = [no_tr,  no_te]
+        yess     = [yes_tr, yes_te]
+        y_pos    = [1, 0]
+        ax_t1.barh(y_pos, nos,  height=0.45, color="#90caf9", label="no",  left=0)
+        ax_t1.barh(y_pos, yess, height=0.45, color="#a5d6a7", label="yes", left=nos)
+        for i, (tot, n, y) in enumerate(zip(totals, nos, yess)):
+            ax_t1.text(n / 2,       y_pos[i], f"{n/tot*100:.1f}%", ha="center", va="center", fontsize=8, color="#333")
+            ax_t1.text(n + y / 2,   y_pos[i], f"{y/tot*100:.1f}%", ha="center", va="center", fontsize=8, color="#333")
+        ax_t1.set_yticks(y_pos)
+        ax_t1.set_yticklabels(datasets, fontsize=10)
+        ax_t1.set_xlabel("Registros", fontsize=9)
+        ax_t1.set_title("Proporción no / yes por dataset", fontsize=10)
+        ax_t1.legend(loc="lower right", fontsize=8)
+        ax_t1.spines[["top","right"]].set_visible(False)
         plt.tight_layout()
-        st.pyplot(fig)
+        st.pyplot(fig_t1)
         plt.close()
 
-        st.caption("⚠️ Dataset desbalanceado: ~88% no suscribe")
+        st.caption("⚠️ Ambos datasets desbalanceados: ~88% no suscribe")
 
 # ════════════════════════════════════════════════════════════════════════════
 # TAB EDA — ANÁLISIS DEL DATASET (PASO 2)
