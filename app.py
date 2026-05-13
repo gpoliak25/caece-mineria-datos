@@ -331,9 +331,23 @@ with tab1:
         y_pos    = [1, 0]
         ax_t1.barh(y_pos, nos,  height=0.45, color="#90caf9", label="no",  left=0)
         ax_t1.barh(y_pos, yess, height=0.45, color="#a5d6a7", label="yes", left=nos)
+        total_max = max(totals)
+        min_w = total_max * 0.08  # umbral: segmento menor al 8% del total_max → etiqueta afuera
         for i, (tot, n, y) in enumerate(zip(totals, nos, yess)):
-            ax_t1.text(n / 2,       y_pos[i], f"{n/tot*100:.1f}%", ha="center", va="center", fontsize=8, color="#333")
-            ax_t1.text(n + y / 2,   y_pos[i], f"{y/tot*100:.1f}%", ha="center", va="center", fontsize=8, color="#333")
+            # etiqueta "no"
+            if n >= min_w:
+                ax_t1.text(n / 2, y_pos[i], f"{n/tot*100:.1f}%",
+                           ha="center", va="center", fontsize=8, color="#333")
+            else:
+                ax_t1.text(n / 2, y_pos[i] + 0.28, f"{n/tot*100:.1f}%",
+                           ha="center", va="bottom", fontsize=7.5, color="#333")
+            # etiqueta "yes"
+            if y >= min_w:
+                ax_t1.text(n + y / 2, y_pos[i], f"{y/tot*100:.1f}%",
+                           ha="center", va="center", fontsize=8, color="#333")
+            else:
+                ax_t1.text(n + y, y_pos[i] + 0.225, f"{y/tot*100:.1f}%",
+                           ha="right", va="bottom", fontsize=7.5, color="#333")
         ax_t1.set_yticks(y_pos)
         ax_t1.set_yticklabels(datasets, fontsize=10)
         ax_t1.set_xlabel("Registros", fontsize=9)
