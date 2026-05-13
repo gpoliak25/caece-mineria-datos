@@ -332,22 +332,35 @@ with tab1:
         ax_t1.barh(y_pos, nos,  height=0.45, color="#90caf9", label="no",  left=0)
         ax_t1.barh(y_pos, yess, height=0.45, color="#a5d6a7", label="yes", left=nos)
         total_max = max(totals)
-        min_w = total_max * 0.08  # umbral: segmento menor al 8% del total_max → etiqueta afuera
+        umbral_barra = total_max * 0.20  # barras < 20% del eje → todas las etiquetas afuera
+
         for i, (tot, n, y) in enumerate(zip(totals, nos, yess)):
-            # etiqueta "no"
-            if n >= min_w:
-                ax_t1.text(n / 2, y_pos[i], f"{n/tot*100:.1f}%",
+            bar_total = n + y
+            if bar_total >= umbral_barra:
+                # Barra grande (Train): etiquetas centradas adentro
+                ax_t1.text(n / 2,     y_pos[i], f"{n/tot*100:.1f}%",
                            ha="center", va="center", fontsize=8, color="#333")
-            else:
-                ax_t1.text(n / 2, y_pos[i] + 0.28, f"{n/tot*100:.1f}%",
-                           ha="center", va="bottom", fontsize=7.5, color="#333")
-            # etiqueta "yes"
-            if y >= min_w:
                 ax_t1.text(n + y / 2, y_pos[i], f"{y/tot*100:.1f}%",
                            ha="center", va="center", fontsize=8, color="#333")
             else:
-                ax_t1.text(n + y, y_pos[i] + 0.225, f"{y/tot*100:.1f}%",
-                           ha="right", va="bottom", fontsize=7.5, color="#333")
+                # Barra pequeña (Test): etiquetas a la derecha con flechas horizontales
+                x_ref = bar_total + total_max * 0.04
+                # "no" → arriba del centro
+                ax_t1.annotate(
+                    f"{n/tot*100:.1f}%",
+                    xy=(n / 2, y_pos[i]),
+                    xytext=(x_ref, y_pos[i] + 0.18),
+                    fontsize=7.5, color="#333", ha="left", va="center",
+                    arrowprops=dict(arrowstyle="-", color="#666", lw=0.9),
+                )
+                # "yes" → abajo del centro
+                ax_t1.annotate(
+                    f"{y/tot*100:.1f}%",
+                    xy=(n + y / 2, y_pos[i]),
+                    xytext=(x_ref, y_pos[i] - 0.18),
+                    fontsize=7.5, color="#333", ha="left", va="center",
+                    arrowprops=dict(arrowstyle="-", color="#666", lw=0.9),
+                )
         ax_t1.set_yticks(y_pos)
         ax_t1.set_yticklabels(datasets, fontsize=10)
         ax_t1.set_xlabel("Registros", fontsize=9)
