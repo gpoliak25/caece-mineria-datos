@@ -82,6 +82,15 @@ DRIVE_FILES = {
 DRIVE_FOLDER = "https://drive.google.com/drive/folders/1thsu2nqNoYj1s41ElEmf8klnW5TpcyBX?usp=sharing"
 
 # ── carga de datos (cached) ──────────────────────────────────────────────────
+@st.cache_data(show_spinner="Cargando dataset...")
+def cargar_eda_dataset(filename: str):
+    import os
+    base = os.path.dirname(__file__)
+    fpath = os.path.join(base, filename)
+    if os.path.exists(fpath):
+        return pd.read_csv(fpath, sep=";")
+    raise FileNotFoundError(f"No se encontró {filename}")
+
 @st.cache_data(show_spinner="Cargando datos...")
 def cargar_datos():
     import os
@@ -380,9 +389,32 @@ with tab_eda:
     from scipy import stats as _stats
 
     st.header("🔬 Análisis del Dataset — Paso 2")
-    st.caption("Basado en banca_test.csv (4.521 registros · 17 variables)")
-    train_eda, test_eda = cargar_datos()
-    df_eda = test_eda.copy()
+
+    # ── Selector de dataset ───────────────────────────────────────────────────
+    _ARCHIVOS_EDA = {
+        "bancaV1_actualizado.csv — completo, variables imputadas":  "bancaV1_actualizado.csv",
+        "banca.csv — completo con imputación job/education":        "banca.csv",
+        "banca_train.csv — conjunto de entrenamiento (45.211)":     "banca_train.csv",
+        "banca_test.csv — conjunto de prueba (4.521)":              "banca_test.csv",
+    }
+    sel_col, btn_col = st.columns([3, 1])
+    with sel_col:
+        eda_label = st.selectbox(
+            "Dataset a analizar",
+            list(_ARCHIVOS_EDA.keys()),
+            index=2,
+            label_visibility="collapsed",
+        )
+    with btn_col:
+        st.link_button(
+            "☁️ Abrir Drive",
+            "https://drive.google.com/drive/folders/1thsu2nqNoYj1s41ElEmf8klnW5TpcyBX",
+            use_container_width=True,
+        )
+
+    eda_filename = _ARCHIVOS_EDA[eda_label]
+    df_eda = cargar_eda_dataset(eda_filename)
+    st.caption(f"📄 **{eda_filename}** · {len(df_eda):,} registros · {df_eda.shape[1]} variables")
 
     sub_dim, sub_cal, sub_tgt, sub_cor, sub_dec = st.tabs([
         "📐 Dimensiones y Variables",
@@ -410,6 +442,25 @@ with tab_eda:
         st.dataframe(dims_df, use_container_width=True, hide_index=True)
 
         st.subheader("Tipos de Variables")
+        _SUBTIPO = {
+            "age":      "Discreta (años)",
+            "job":      "Nominal",
+            "marital":  "Nominal",
+            "education":"Ordinal",
+            "default":  "Binaria",
+            "balance":  "Continua",
+            "housing":  "Binaria",
+            "loan":     "Binaria",
+            "contact":  "Nominal",
+            "day":      "Discreta cíclica",
+            "month":    "Nominal cíclica",
+            "duration": "Continua",
+            "campaign": "Discreta",
+            "pdays":    "Discreta (−1 = nunca contactado)",
+            "previous": "Discreta",
+            "poutcome": "Nominal",
+            "y":        "Binaria",
+        }
         var_rows = []
         for col in df_eda.columns:
             if col == "y":
@@ -423,8 +474,15 @@ with tab_eda:
                 nuniq  = df_eda[col].nunique()
                 sample = ", ".join(df_eda[col].value_counts().head(3).index.tolist())
                 detalle = f"{sample}{'…' if nuniq > 3 else ''}  ({nuniq} niveles)"
-            nota = "⚠️ DATA LEAKAGE — excluida" if col == "duration" else ""
-            var_rows.append({"Variable": col, "Tipo": vtype, "Rango / Niveles": detalle, "Nota": nota})
+            subtipo = _SUBTIPO.get(col, "—")
+            nota    = "⚠️ DATA LEAKAGE — excluida" if col == "duration" else ""
+            var_rows.append({
+                "Variable":        col,
+                "Tipo":            vtype,
+                "Subtipo":         subtipo,
+                "Rango / Niveles": detalle,
+                "Nota":            nota,
+            })
         st.dataframe(pd.DataFrame(var_rows), use_container_width=True, hide_index=True)
 
         st.subheader("⚠️ Data Leakage — Variable `duration`")
