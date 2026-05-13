@@ -11,4 +11,3 @@ output.log
 .venv
 banca_testV1.csv
 banca_trainV1.csv
-banca.csv
