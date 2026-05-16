@@ -510,9 +510,9 @@ with tabs[6]:
         gauge.update_layout(height=300, margin=dict(t=60, b=10))
         st.plotly_chart(gauge, use_container_width=True)
 
-        if proba_pct >= 50:
+        if proba_pct >= 60:
             st.success("🟢 **Cliente prometedor** — vale la pena llamarlo.")
-        elif proba_pct >= 25:
+        elif proba_pct >= 40:
             st.warning("🟡 **Cliente dudoso** — depende del presupuesto.")
         else:
             st.error("🔴 **Baja probabilidad** — mejor priorizar a otros.")
