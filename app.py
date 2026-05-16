@@ -495,7 +495,8 @@ with tabs[6]:
         gauge = go.Figure(go.Indicator(
             mode="gauge+number",
             value=proba_pct,
-            number={"suffix": " %"},
+            number={"suffix": " %", "font": {"size": 48}},
+            domain={"x": [0, 1], "y": [0, 1]},
             gauge={
                 "axis": {"range": [0, 100]},
                 "bar": {"color": AZUL},
@@ -505,9 +506,13 @@ with tabs[6]:
                     {"range": [50, 100], "color": "#dcfce7"},
                 ],
             },
-            title={"text": "Probabilidad de conversión"},
+            title={"text": "Probabilidad de conversión", "font": {"size": 16}},
         ))
-        gauge.update_layout(height=320, margin=dict(t=60, b=60, l=30, r=30))
+        gauge.update_layout(
+            height=300,
+            margin=dict(t=60, b=20, l=20, r=20),
+            paper_bgcolor="rgba(0,0,0,0)",
+        )
         st.plotly_chart(gauge, use_container_width=True)
 
         if proba_pct >= 60:
