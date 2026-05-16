@@ -427,6 +427,10 @@ with tabs[6]:
     st.markdown("Cargá los datos de un cliente y mirá qué predice el modelo "
                 "Random Forest sobre su probabilidad de conversión.")
 
+    # --- Grupos de variables ---
+    CAMPOS_PRINCIPALES = ["age", "job", "balance", "education", "housing", "poutcome"]
+    CAMPOS_AVANZADOS = [c for c in FEATURES if c not in CAMPOS_PRINCIPALES]
+
     # --- Valores por defecto e inicialización ---
     def valor_inicial(col):
         if col in NUMERICAS:
@@ -446,7 +450,8 @@ with tabs[6]:
             else:
                 st.session_state[f"pred_{c}"] = str(fila[c])
 
-    st.button("🎲 Cargar un cliente de ejemplo", on_click=cargar_ejemplo)
+    st.button("🎲 Cargar un cliente de ejemplo", on_click=cargar_ejemplo,
+              type="primary")
     st.divider()
 
     col_izq, col_der = st.columns([1.3, 1])
@@ -454,8 +459,10 @@ with tabs[6]:
     # --- Columna izquierda: controles ---
     with col_izq:
         st.subheader("Datos del cliente")
+
+        # Campos principales en 2 columnas
         cc = st.columns(2)
-        for i, col in enumerate(FEATURES):
+        for i, col in enumerate(CAMPOS_PRINCIPALES):
             destino = cc[i % 2]
             if col in NUMERICAS:
                 destino.number_input(
@@ -464,6 +471,19 @@ with tabs[6]:
             else:
                 opciones = sorted(df[col].dropna().unique().tolist())
                 destino.selectbox(col, opciones, key=f"pred_{col}")
+
+        # Campos avanzados dentro de un expander
+        with st.expander("⚙️ Opciones avanzadas (el resto de las variables)"):
+            cc_adv = st.columns(2)
+            for i, col in enumerate(CAMPOS_AVANZADOS):
+                destino = cc_adv[i % 2]
+                if col in NUMERICAS:
+                    destino.number_input(
+                        col, value=int(st.session_state[f"pred_{col}"]),
+                        step=1, key=f"pred_{col}")
+                else:
+                    opciones = sorted(df[col].dropna().unique().tolist())
+                    destino.selectbox(col, opciones, key=f"pred_{col}")
 
     # --- Armar la fila del cliente y predecir ---
     fila = {c: st.session_state[f"pred_{c}"] for c in FEATURES}
