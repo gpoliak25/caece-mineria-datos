@@ -507,7 +507,7 @@ with tabs[6]:
             },
             title={"text": "Probabilidad de conversión"},
         ))
-        gauge.update_layout(height=300, margin=dict(t=60, b=10))
+        gauge.update_layout(height=320, margin=dict(t=60, b=60, l=30, r=30))
         st.plotly_chart(gauge, use_container_width=True)
 
         if proba_pct >= 60:
