@@ -465,9 +465,7 @@ with tabs[6]:
         for i, col in enumerate(CAMPOS_PRINCIPALES):
             destino = cc[i % 2]
             if col in NUMERICAS:
-                destino.number_input(
-                    col, value=int(st.session_state[f"pred_{col}"]),
-                    step=1, key=f"pred_{col}")
+                destino.number_input(col, step=1, key=f"pred_{col}")
             else:
                 opciones = sorted(df[col].dropna().unique().tolist())
                 destino.selectbox(col, opciones, key=f"pred_{col}")
@@ -478,9 +476,7 @@ with tabs[6]:
             for i, col in enumerate(CAMPOS_AVANZADOS):
                 destino = cc_adv[i % 2]
                 if col in NUMERICAS:
-                    destino.number_input(
-                        col, value=int(st.session_state[f"pred_{col}"]),
-                        step=1, key=f"pred_{col}")
+                    destino.number_input(col, step=1, key=f"pred_{col}")
                 else:
                     opciones = sorted(df[col].dropna().unique().tolist())
                     destino.selectbox(col, opciones, key=f"pred_{col}")
