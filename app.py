@@ -122,12 +122,8 @@ with st.sidebar:
 # -------------------------------------------------------------
 # TÍTULO PRINCIPAL
 # -------------------------------------------------------------
-col_logo, col_titulo = st.columns([1, 5])
-with col_logo:
-    st.image("logo_caece.png", width=100)
-with col_titulo:
-    st.title("🏦 ¿A quién llamar?")
-    st.markdown("##### Un modelo predictivo para la captación de clientes bancarios")
+st.title("🏦 ¿A quién llamar?")
+st.markdown("##### Un modelo predictivo para la captación de clientes bancarios")
 st.divider()
 
 # -------------------------------------------------------------
