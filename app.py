@@ -107,7 +107,8 @@ CATEGORICAS = [c for c in FEATURES if c not in NUMERICAS]
 # MENÚ LATERAL
 # -------------------------------------------------------------
 with st.sidebar:
-    st.title("🏦 TP Minería de Datos")
+    st.image("logo_caece.png", width=180)
+    st.title("TP Minería de Datos")
     st.markdown("**Tema:** Captación de clientes bancarios")
     st.markdown("**Modelos:** CART y Random Forest")
     st.markdown("**Integrantes:** Lic. Lorena Lopez · Lic. Gisela Poliak")
@@ -121,8 +122,12 @@ with st.sidebar:
 # -------------------------------------------------------------
 # TÍTULO PRINCIPAL
 # -------------------------------------------------------------
-st.title("🏦 ¿A quién llamar?")
-st.markdown("##### Un modelo predictivo para la captación de clientes bancarios")
+col_logo, col_titulo = st.columns([1, 5])
+with col_logo:
+    st.image("logo_caece.png", width=100)
+with col_titulo:
+    st.title("🏦 ¿A quién llamar?")
+    st.markdown("##### Un modelo predictivo para la captación de clientes bancarios")
 st.divider()
 
 # -------------------------------------------------------------
